@@ -1,0 +1,40 @@
+name: Deploy to ECR
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ap-southeast-1 # e.g., us-east-1
+          
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and tag Docker image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/linus-flask-private-repository:${{ github.sha }} .
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ steps.login-ecr.outputs.registry }}/linus-flask-private-repository:${{ github.sha }}
+
+      - name: Tag latest image (optional)
+        run: |
+          docker tag ${{ steps.login-ecr.outputs.registry }}/linus-flask-private-repository:${{ github.sha }} ${{ steps.login-ecr.outputs.registry }}/linus-flask-private-repository:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/linus-flask-private-repository:latest
+
